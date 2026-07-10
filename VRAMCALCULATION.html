@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>小白怎么速算模型显存</title>
+<style>
+    :root{
+      --bg:#f6fbff;
+      --ink:#19202a;
+      --muted:#667085;
+      --line:rgba(37, 52, 78, .12);
+      --pink:#d91e7f;
+      --blue:#2563eb;
+      --green:#059669;
+      --amber:#d97706;
+      --purple:#7c3aed;
+      --card:rgba(255,255,255,.76);
+      --shadow:0 24px 80px rgba(43,62,103,.14);
+      --radius:28px;
+      --max:1180px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      color:var(--ink);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",Arial,sans-serif;
+      line-height:1.68;
+      background:
+        radial-gradient(circle at 18% 8%, rgba(216,30,127,.12), transparent 30%),
+        radial-gradient(circle at 82% 16%, rgba(37,99,235,.12), transparent 34%),
+        radial-gradient(circle at 50% 96%, rgba(217,119,6,.14), transparent 34%),
+        linear-gradient(180deg,#f8fdff 0%,#f4f8ff 46%,#fbf7ff 100%);
+      overflow-x:hidden;
+    }
+    body:before, body:after{
+      content:""; position:fixed; inset:auto; z-index:-1; pointer-events:none;
+      width:58vw; height:28vw; filter:blur(8px); opacity:.5;
+      background:linear-gradient(135deg,rgba(148,163,184,.25),rgba(216,30,127,.10),rgba(37,99,235,.10));
+      border-radius:50% 45% 55% 48%;
+    }
+    body:before{left:-12vw; bottom:-12vw; transform:rotate(12deg)}
+    body:after{right:-10vw; bottom:-8vw; transform:rotate(-10deg)}
+    a{color:inherit;text-decoration:none}
+    .nav{
+      position:sticky; top:0; z-index:20;
+      backdrop-filter:blur(18px);
+      background:rgba(246,251,255,.78);
+      border-bottom:1px solid var(--line);
+    }
+    .nav-inner{max-width:var(--max); margin:auto; display:flex; align-items:center; justify-content:space-between; gap:24px; padding:14px 22px}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.02em}
+    .brand-dot{width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--blue));box-shadow:0 0 0 7px rgba(216,30,127,.08)}
+    .nav-links{display:flex; gap:12px; flex-wrap:wrap; color:#475467; font-size:14px}
+    .nav-links a{padding:7px 10px; border-radius:99px}
+    .nav-links a:hover{background:rgba(216,30,127,.08); color:var(--pink)}
+    .hero{max-width:var(--max); margin:0 auto; padding:88px 22px 70px; min-height:72vh; display:grid; align-items:center; grid-template-columns:1.2fr .8fr; gap:44px}
+    .kicker{display:inline-flex; gap:8px; align-items:center; padding:7px 12px; border:1px solid var(--line); border-radius:99px; background:rgba(255,255,255,.62); color:var(--pink); font-weight:700; font-size:14px}
+    h1{font-size:clamp(44px,7vw,90px); line-height:.96; letter-spacing:-.065em; margin:22px 0 22px}
+    .hero p{font-size:clamp(18px,2.4vw,24px); color:#344054; max-width:760px}
+    .hero-card{position:relative; min-height:440px; border-radius:36px; background:linear-gradient(160deg,rgba(255,255,255,.78),rgba(255,255,255,.42)); border:1px solid var(--line); box-shadow:var(--shadow); overflow:hidden; padding:28px}
+    .hero-card:before{content:""; position:absolute; inset:0; background:radial-gradient(circle at 35% 30%,rgba(216,30,127,.22),transparent 30%),radial-gradient(circle at 75% 65%,rgba(37,99,235,.20),transparent 36%); opacity:.78}
+    .formula-stack{position:relative; display:grid; gap:16px; z-index:1; margin-top:18px}
+    .formula{background:rgba(255,255,255,.76); border:1px solid var(--line); border-radius:22px; padding:18px 18px; box-shadow:0 10px 30px rgba(28,38,68,.08)}
+    .formula small{display:block; color:var(--muted); font-weight:700; margin-bottom:6px}
+    code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace}
+    .formula code{font-size:18px; font-weight:800; color:#101828; white-space:normal}
+    .section{max-width:var(--max); margin:0 auto; padding:54px 22px}
+    .section-head{display:flex; align-items:flex-end; justify-content:space-between; gap:22px; margin-bottom:24px}
+    .section h2{font-size:clamp(34px,4.6vw,58px); line-height:1.04; margin:0; letter-spacing:-.04em; color:var(--pink)}
+    .section .lead{font-size:20px; color:#475467; max-width:660px; margin:10px 0 0}
+    .grid{display:grid; gap:18px}
+    .grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{background:var(--card); border:1px solid var(--line); box-shadow:0 16px 50px rgba(43,62,103,.10); border-radius:var(--radius); padding:26px; backdrop-filter:blur(16px)}
+    .card h3{margin:0 0 12px; font-size:24px; letter-spacing:-.02em}
+    .card p{margin:0 0 12px; color:#475467}
+    .tag{display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:#344054; background:#fff; border:1px solid var(--line); padding:5px 10px; border-radius:99px; margin-bottom:13px}
+    .big-number{font-size:54px; line-height:1; font-weight:900; letter-spacing:-.05em; margin:8px 0; background:linear-gradient(135deg,var(--pink),var(--blue)); -webkit-background-clip:text; background-clip:text; color:transparent}
+    ul{padding-left:1.15em; margin:10px 0 0}
+    li{margin:6px 0; color:#475467}
+    strong{color:#111827}
+    .pill-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px}
+    .pill{border-radius:999px; padding:8px 12px; background:rgba(255,255,255,.72); border:1px solid var(--line); color:#344054; font-weight:700; font-size:14px}
+    .timeline{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px}
+    .step{position:relative; padding-top:44px}
+    .step:before{content:attr(data-step); position:absolute; top:0; left:26px; width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--pink),var(--purple)); color:white; font-weight:900; box-shadow:0 12px 30px rgba(216,30,127,.20)}
+    .compare{overflow:hidden; padding:0}
+    .compare table{width:100%; border-collapse:collapse; font-size:15px}
+    th,td{padding:15px 16px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top}
+    th{font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:#475467; background:rgba(255,255,255,.62)}
+    tr:last-child td{border-bottom:0}
+    .accent-blue{color:var(--blue)} .accent-green{color:var(--green)} .accent-amber{color:var(--amber)} .accent-purple{color:var(--purple)}
+    .calc-panel{display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:stretch}
+    .calc{background:#101828; color:#f8fafc; border-radius:30px; padding:28px; box-shadow:0 22px 70px rgba(16,24,40,.22)}
+    .calc p,.calc li{color:#d0d5dd}.calc h3{color:#fff}.calc .tag{background:rgba(255,255,255,.08); color:#fff; border-color:rgba(255,255,255,.18)}
+    .gpu{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:16px}
+    .gpu div{background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:14px}
+    .gpu b{display:block; color:white; font-size:20px}
+    .practice{counter-reset:q; display:grid; gap:18px}
+    .question{position:relative; overflow:hidden}
+    .question:before{counter-increment:q; content:"Q" counter(q); position:absolute; right:24px; top:20px; font-size:64px; font-weight:900; color:rgba(216,30,127,.08); letter-spacing:-.08em}
+    .footer{max-width:var(--max); margin:0 auto; padding:52px 22px 76px; color:#667085; display:flex; justify-content:space-between; gap:20px; border-top:1px solid var(--line)}
+    @media (max-width:900px){.hero{grid-template-columns:1fr; padding-top:54px}.hero-card{min-height:auto}.grid.two,.grid.three,.grid.four,.timeline,.calc-panel{grid-template-columns:1fr}.section-head{display:block}.nav-links{display:none}.footer{display:block}.gpu{grid-template-columns:1fr}}
+  
+.hero{align-items:center}.hero>div:first-child{max-width:720px}.hero h1{font-size:clamp(48px,7vw,92px);line-height:1.02}.accuracy-note{border-left:5px solid var(--pink)}
+
+    .memory-story{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:18px}
+    .memory-story .card{position:relative;overflow:hidden}
+    .memory-story .emoji{font-size:34px;display:block;margin-bottom:10px}
+    .memory-story .plain{font-weight:800;color:#101828;font-size:18px;margin-bottom:8px}
+    .gpu-table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.62)}
+    .gpu-table th,.gpu-table td{padding:14px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+    .gpu-table th{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#667085;background:rgba(37,99,235,.05)}
+    .gpu-table tr:last-child td{border-bottom:0}
+    .gpu-table td:first-child{font-weight:800;color:#101828;white-space:nowrap}
+    .system-note{margin-top:16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,rgba(124,58,237,.08),rgba(37,99,235,.08));border:1px solid var(--line)}
+    details.answer{margin-top:16px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.68);overflow:hidden}
+    details.answer summary{cursor:pointer;padding:16px 18px;font-weight:800;color:var(--blue);list-style:none}
+    details.answer summary::-webkit-details-marker{display:none}
+    details.answer summary:after{content:'＋';float:right;font-size:20px}
+    details.answer[open] summary:after{content:'－'}
+    .answer-body{padding:0 18px 18px}
+    .answer-body .result{font-size:24px;font-weight:900;color:var(--pink);margin:6px 0 10px}
+    .plain-callout{padding:18px 20px;border-radius:18px;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.18);font-weight:700;color:#344054}
+    @media(max-width:800px){.memory-story{grid-template-columns:1fr}.gpu-table{font-size:14px}.gpu-table th,.gpu-table td{padding:11px 10px}}
+
+</style>
+</head>
+<body>
+<nav class="nav">
+<div class="nav-inner">
+<a class="brand" href="#top"><span class="brand-dot"></span><span>显存计算 · VRAM Math</span></a>
+<div class="nav-links">
+<a href="#params">模型参数</a><a href="#precision">模型精度</a><a href="#inference">推理</a><a href="#training">训练</a><a href="#estimate">显存估算</a><a href="#practice">练习题</a>
+</div>
+</div>
+</nav>
+<main id="top">
+<section class="hero">
+<div>
+
+<h1>小白怎么速算<br/>模型显存</h1>
+<p>不用背复杂术语：先算“模型本身”要占多少显存，再根据推理或训练场景，加上聊天缓存和训练过程的额外占用，就能快速判断模型大概需要多少显存。</p>
+
+</div>
+<aside aria-label="关键公式" class="hero-card">
+<div class="formula-stack">
+<div class="formula"><small>模型本身（FP16 / BF16）</small><code>1B 参数 ≈ 2GB（约 1.86GiB）</code></div>
+<div class="formula"><small>推理时</small><code>模型本身 + 聊天缓存 + 临时工作空间</code></div>
+<div class="formula"><small>全量训练显存（AdamW）</small><code>约 16–20 bytes / 参数 + 激活</code></div>
+<div class="formula"><small>先记住</small><code>模型本身只是最低占用，装得下不等于一定跑得稳</code></div>
+</div>
+</aside>
+</section>
+<section class="section" id="params">
+<div class="section-head">
+<div><h2>模型参数</h2><p class="lead">参数是模型在训练过程中学到的可学习数值，可以理解为大脑里的“神经连接强度”。</p></div>
+</div>
+<div class="grid three">
+<article class="card"><span class="tag">Weights</span><h3>权重</h3><p>用于衡量输入信号的重要程度。通常我们说 7B / 13B / 70B，指的就是 70 亿 / 130 亿 / 700 亿个参数权重。</p></article>
+<article class="card"><span class="tag">Bias</span><h3>偏置</h3><p>在加权求和后额外加的常数，用于调整输出整体偏移。简单说：不管输入是什么，先给一个基础倾向。</p></article>
+<article class="card"><span class="tag">Rule of thumb</span><h3>参数越多 ≠ 越划算</h3><p>参数越多，模型记住的模式越多，能力上限可能越高。但记忆多不等于思考快，也不等于成本低。</p></article>
+</div>
+</section>
+<section class="section" id="precision">
+<div class="section-head"><div><h2>模型精度</h2><p class="lead">精度指单个参数用多少 bit 存储和计算：数字写得越精细，显存越贵。</p></div></div>
+<div class="grid four">
+<article class="card"><span class="tag accent-blue">FP32</span><div class="big-number">4B</div><h3>32 bit</h3><p>早期默认。精度高、稳定，但显存太贵，现在几乎不用来跑大模型。</p></article>
+<article class="card"><span class="tag accent-green">FP16 / BF16</span><div class="big-number">2B</div><h3>16 bit</h3><p>大模型中最常见的浮点格式。BF16 通常更适合训练稳定性；FP16 / BF16 权重都约占 2 bytes / 参数。</p></article>
+<article class="card"><span class="tag accent-amber">INT8</span><div class="big-number">1B</div><h3>8 bit</h3><p>常用于量化推理，可明显降低权重显存；实际占用还包含量化尺度、元数据和运行时开销。</p></article>
+<article class="card"><span class="tag accent-purple">INT4</span><div class="big-number">0.5B</div><h3>4 bit</h3><p>常用于低成本推理。理论权重为 0.5 byte / 参数，但实际文件和显存通常会略高于理论值。</p></article>
+</div>
+<div class="card compare" style="margin-top:18px">
+<table>
+<thead><tr><th>单位</th><th>含义</th><th>直觉理解</th></tr></thead>
+<tbody>
+<tr><td><strong>bit</strong></td><td>最小信息单位，0 或 1</td><td>写数字能用多少格子</td></tr>
+<tr><td><strong>byte</strong></td><td>1 byte = 8 bits</td><td>一组格子</td></tr>
+<tr><td><strong>FP</strong></td><td>Floating Point，浮点数</td><td>可以表示小数，范围大、精度高</td></tr>
+<tr><td><strong>INT</strong></td><td>Integer，整数</td><td>只能表示离散值，更省空间</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="section" id="inference">
+<div class="section-head"><div><h2>推理</h2><p class="lead">推理就是用已经训练好的模型生成结果。显存主要来自模型权重、KV Cache、临时激活和框架运行时开销。</p></div></div>
+<div class="timeline">
+<article class="card step" data-step="1"><h3>📦 模型本身</h3><p>这是必须先放进显存的部分，也是最容易心算的最低占用。例如 8B 的 FP16 模型约占 16GB。</p></article>
+<article class="card step" data-step="2"><h3>💬 聊天缓存（KV Cache）</h3><p>模型为了记住前文，会保存一份“聊天记录”。上下文越长、同时服务的人越多，这部分越大，不能按模型大小固定乘一个百分比。</p></article>
+<article class="card step" data-step="3"><h3>🧰 临时工作空间</h3><p>模型计算时还会临时占用一些显存，类似工作台。大小受 batch、序列长度和推理框架影响。</p></article>
+</div>
+<div class="grid two" style="margin-top:18px">
+<article class="card"><span class="tag">Transformer</span><h3>看全文再理解</h3><p>几乎所有现代大模型都是 Transformer 变体。Attention 是核心机制，让模型处理当前信息时，动态关注最相关的上下文。</p></article>
+<article class="card"><span class="tag">Attention</span><h3>Query · Key · Value</h3><p>模型把每个 token 映射成三样东西：Query 表示我现在想找什么，Key 表示我能被怎样匹配，Value 表示我真正包含的内容。</p></article>
+</div>
+</section>
+<section class="section" id="training">
+<div class="section-head"><div><h2>训练</h2><p class="lead">推理只需要“使用模型”；训练还要记录模型如何学习，所以同一个模型，训练通常比推理占用多得多。</p></div></div>
+<div class="grid four">
+<article class="card"><span class="tag">1</span><h3>📦 模型本身</h3><p>当前版本的模型参数，必须放在显存中。</p></article>
+<article class="card"><span class="tag">2</span><h3>梯度</h3><p>衡量每个参数对错误的影响有多大。</p></article>
+<article class="card"><span class="tag">3</span><h3>🧭 学习方向记录</h3><p>Adam / AdamW 会为每个参数保存两份历史记录，用来判断下一步往哪里调整。专业名称叫“优化器状态”，通常约 8 bytes / 参数。</p></article>
+<article class="card"><span class="tag">4</span><h3>📝 解题草稿（激活）</h3><p>训练时要保留前向计算过程，方便反向传播。batch 越大、文本越长，这份“草稿”通常越大。</p></article>
+</div>
+<div class="plain-callout" style="margin-top:18px">一句话理解：推理像“打开一本书阅读”；训练像“边读、边做笔记、边修改原稿，还要保留修改历史”。因此全量训练时，模型每个参数常常不是只占 2 bytes，而是合计约 16 bytes，再加训练草稿和临时空间。</div>
+</section>
+<section class="section" id="estimate">
+<div class="section-head"><div><h2>显存需求估算</h2><p class="lead">以下是便于心算的数量级估算。GB 按十进制计算；实际运行还要预留框架、通信和显存碎片等开销。</p></div></div>
+<div class="calc-panel">
+<article class="calc"><span class="tag">Inference</span><h3>推理显存</h3><p class="mono">推理显存 ≈ 模型本身 + 聊天缓存 + 临时工作空间</p><ul><li>FP16 / BF16 模型本身：参数量（B）× 2 ≈ GB</li><li>INT8 权重：参数量（B）× 1 ≈ GB；INT4 理论值 × 0.5</li><li>KV Cache 取决于上下文、batch 和模型结构，不按权重百分比硬套</li><li>实际部署建议在估算值之上预留约 10%–20% 运行空间</li></ul></article>
+<article class="calc"><span class="tag">Training</span><h3>训练显存</h3><p class="mono">全量训练（AdamW）≈ 16–20 bytes / 参数 + 激活</p><ul><li>常见拆分：权重 2B + 梯度 2B + FP32 主权重 4B + Adam 状态 8B</li><li>仅参数相关状态，70B 就约 1.12TB（按 16 bytes / 参数）</li><li>激活取决于 batch、序列长度和梯度检查点，可能再增加大量显存</li><li>ZeRO、FSDP、张量并行和 offload 会改变每张卡的实际占用</li></ul></article>
+</div>
+<div class="card" style="margin-top:18px"><h3>Offload 与并行</h3><p>Offload 会把部分权重、梯度或优化器状态放到 CPU 内存或 NVMe；并行则把模型状态和计算拆到多张 GPU。它们能降低单卡需求，但会引入通信、带宽和速度成本。多卡总显存够用，也不代表任意卡数都能高效运行。</p></div><div class="card accuracy-note" style="margin-top:18px"><span class="tag">重要</span><h3>GB 与 GiB 不完全相同</h3><p>厂商和模型文件通常用十进制 GB：1GB = 10⁹ bytes；系统工具有时显示二进制 GiB：1GiB = 2³⁰ bytes。因此“1B 个 FP16 参数 = 2GB”约等于 1.86GiB。</p></div>
+<div class="grid two" style="margin-top:18px">
+<article class="card"><span class="tag">70B FP16 / BF16 推理</span><h3>模型本身先占约 140GB</h3><ul><li>70B × 2 bytes = 140GB（约 130GiB）</li><li>这只是把模型“装进去”的最低空间</li><li>聊天缓存和临时工作空间还要继续占显存，所以 2 × 80GB 通常非常紧张</li></ul></article>
+<article class="card"><span class="tag">70B 全量训练 · AdamW</span><h3>仅“模型 + 学习记录”就约 1.12TB</h3><ul><li>70B × 16 bytes ≈ 1.12TB</li><li>这里的 16 bytes 包含模型、梯度、主副本和 Adam 的学习记录</li><li>还没算训练草稿、临时缓冲和通信空间，因此实际会更高</li></ul></article>
+</div>
+<div class="card" style="margin-top:18px"><h3>一张 GPU 大概能放下多大的模型？</h3><p>下面只比较“模型本身”的理论容量，方便快速判断。真正运行时还要给聊天缓存和临时工作空间留余量。</p>
+<table class="gpu-table"><thead><tr><th>GPU</th><th>显存</th><th>单卡大致可容纳</th><th>怎么理解</th></tr></thead><tbody>
+<tr><td>RTX 4090</td><td>24GB</td><td>7B FP16；14B INT4</td><td>适合个人开发和本地体验</td></tr>
+<tr><td>RTX 5090</td><td>32GB</td><td>14B FP16 较紧；32B INT4</td><td>消费级单卡中的大显存选择</td></tr>
+<tr><td>A100 / H100</td><td>80GB</td><td>32B FP16；70B INT8 较紧</td><td>数据中心训练和推理常用</td></tr>
+<tr><td>H200</td><td>141GB</td><td>70B FP16 的模型本身</td><td>仍需为 KV Cache 和运行空间留余量</td></tr>
+<tr><td>B200</td><td>192GB</td><td>70B FP16，并有较充足余量</td><td>Blackwell 数据中心 GPU</td></tr>
+<tr><td>B300</td><td>288GB</td><td>100B FP16；更大的量化 / MoE 模型</td><td>Blackwell Ultra，面向大型推理与训练</td></tr>
+</tbody></table>
+<div class="system-note"><strong>GB300 不是一张显卡。</strong> GB300 Grace Blackwell Ultra 是把 Grace CPU 和 Blackwell Ultra GPU 组合起来的平台；GB300 NVL72 是机架级系统，包含 72 颗 GPU、36 颗 Grace CPU，总 GPU 显存最高约 20TB。不要把它与“单张 B300 288GB”混为一谈。</div>
+<p style="margin-top:16px">简单判断：先用“参数量 × 每参数字节数”算模型本身，再挑显存更大的 GPU，并额外留出运行空间。多卡相加只是容量下限，实际还要看并行方式、通信速度和软件支持。</p></div>
+</section>
+<section class="section" id="practice">
+<div class="section-head"><div><h2>简单做个题</h2><p class="lead">用同一套估算框架，快速判断模型能不能跑、需要多少卡。</p></div></div>
+<div class="practice">
+<article class="card question"><h3>题目 1：推理</h3><p><strong>场景：</strong>一个 32B 模型，FP16 / BF16，推理。</p><ul><li>仅模型本身大约需要多少显存？</li><li>如果用 RTX 4090（24GB）推理，容量下限是多少张卡？</li></ul><details class="answer"><summary>查看答案与解析</summary><div class="answer-body"><div class="result">答案：模型本身约 64GB；至少 3 张 4090 才达到容量下限。</div><p><strong>计算：</strong>32 × 2 = 64GB。两张 4090 只有 48GB，装不下；三张合计 72GB，刚超过模型本身。</p><p><strong>但注意：</strong>72GB 只比 64GB 多 8GB，还要容纳 KV Cache、临时工作空间和框架开销，因此工程上可能仍然很紧张。更稳妥的方案是更多显存、量化，或使用专业数据中心 GPU。</p></div></details></article>
+<article class="card question"><h3>题目 2：训练</h3><p><strong>场景：</strong>一个 14B 模型，混合精度全量训练，AdamW。</p><ul><li>先不算训练草稿，模型和学习记录大约需要多少显存？</li><li>使用 A100 40GB 时，容量下限是多少张？</li></ul><details class="answer"><summary>查看答案与解析</summary><div class="answer-body"><div class="result">答案：约 224GB；容量算术下限为 6 张 A100 40GB。</div><p><strong>计算：</strong>14 × 16 = 224GB；224 ÷ 40 = 5.6，因此至少向上取整为 6 张。</p><p><strong>为什么实际通常更多：</strong>224GB 还没有包括训练草稿（激活）、临时缓冲、通信空间和显存碎片。ZeRO / FSDP 能把模型和学习记录拆到多张卡上，梯度检查点则可以减少训练草稿。</p></div></details></article>
+<article class="card question"><h3>题目 3：卡数判断 / 可行性</h3><p><strong>场景：</strong>4 张 H100 80GB，一个 100B 模型，FP16 / BF16。</p><ul><li>推理时，仅看模型本身是否放得下？</li><li>全量训练时，容量下限大约需要多少张 H100 80GB？</li></ul><details class="answer"><summary>查看答案与解析</summary><div class="answer-body"><div class="result">答案：推理容量上放得下；训练参数相关状态的下限约为 20 张。</div><p><strong>推理：</strong>100 × 2 = 200GB；4 张 H100 总显存为 320GB，因此模型本身有空间放下，还剩约 120GB 给 KV Cache、临时工作空间和框架开销。但还必须确认并行方式和卡间通信。</p><p><strong>训练：</strong>100 × 16 = 1600GB；1600 ÷ 80 = 20 张。这仍然没有包括训练草稿和临时开销，因此实际卡数通常更多，或必须配合 ZeRO / FSDP、梯度检查点与多机并行。</p></div></details></article>
+</div>
+</section>
+</main>
+<footer class="footer"><span>一页看懂：模型本身、推理增量与训练成本。</span><span>参数量 × 每参数字节数，先算模型本身，再加运行开销</span></footer>
+</body>
+</html>
