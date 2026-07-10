@@ -1,24 +1,15 @@
 # 显存速算小站
 
-这是一个可以直接部署到 GitHub Pages 的纯静态网站。
+一个适合 AI / LLM 新人的静态学习网站。
 
-## 文件
+## 页面
+- `index.html` 首页
+- `calculator.html` 显存计算器
+- `vram.html` 显存速算教程
+- `training.html` 训练显存
+- `gpu.html` GPU 对照、官方规格与购买/询价链接
+- `practice.html` 由易到难练习题
+- `resources.html` GPU / 推理 / 训练学习资料
+- `glossary.html` 术语表
 
-- `index.html`：首页
-- `vram.html`：显存速算与在线计算器
-- `training.html`：训练显存解释
-- `gpu.html`：常见 GPU 对照
-- `glossary.html`：术语表
-- `style.css`：统一样式
-
-## 部署到现有 GitHub 仓库
-
-1. 下载并解压压缩包。
-2. 打开 GitHub 仓库 `fadingoasis9/vramsimplecalculation`。
-3. 删除或覆盖原来的 `index.html`。
-4. 上传本目录中的全部文件，并提交（Commit changes）。
-5. GitHub Pages 会自动更新。
-
-网站地址：
-
-`https://fadingoasis9.github.io/vramsimplecalculation/`
+直接上传全部文件到 GitHub Pages 仓库根目录即可。

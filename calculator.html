@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<nav class="nav"><div class="nav-inner"><a class="brand" href="index.html"><span class="brand-dot"></span><span>显存速算小站</span></a><div class="nav-links"><a href="index.html">首页</a><a class="active" href="calculator.html">显存计算器</a><a href="vram.html">显存速算</a><a href="training.html">训练显存</a><a href="gpu.html">GPU 对照</a><a href="glossary.html">术语表</a></div></div></nav>
+<nav class="nav"><div class="nav-inner"><a class="brand" href="index.html"><span class="brand-dot"></span><span>显存速算小站</span></a><div class="nav-links"><a href="index.html">首页</a><a class="active" href="calculator.html">显存计算器</a><a href="vram.html">显存速算</a><a href="training.html">训练显存</a><a href="gpu.html">GPU 对照</a><a href="practice.html">练习题</a><a href="resources.html">学习资料</a><a href="glossary.html">术语表</a></div></div></nav>
 <main>
 <section class="section calculator-hero"><div class="breadcrumbs"><a href="index.html">首页</a> / 显存计算器</div><div class="section-head"><h2>模型显存计算器</h2><p class="lead">先算模型本身，再根据推理或训练场景增加额外占用。结果是容量估算，不代表所有框架都能按该卡数稳定运行。</p></div></section>
 <section class="section compact-top">
@@ -25,6 +25,7 @@
 <button type="button" class="preset" data-params="32">32B</button>
 <button type="button" class="preset" data-params="70">70B</button>
 <button type="button" class="preset" data-params="100">100B</button>
+<button type="button" class="preset" data-params="500">500B</button>
 </div>
 <div class="field"><label for="params">模型参数量</label><div class="input-suffix"><input id="params" type="number" min="0.1" step="0.1" value="8" inputmode="decimal"><span>B</span></div><p class="field-help">8B = 80 亿参数；70B = 700 亿参数。</p></div>
 <div class="field"><label for="precision">模型精度 / 量化</label><select id="precision"><option value="4">FP32 · 4 bytes / 参数</option><option value="2" selected>FP16 / BF16 · 2 bytes / 参数</option><option value="1">INT8 · 约 1 byte / 参数</option><option value="0.5">INT4 · 理论约 0.5 byte / 参数</option></select></div>
@@ -33,16 +34,17 @@
 </div>
 <div id="trainingFields" hidden>
 <div class="field"><label for="trainBytes">每个参数的训练状态</label><select id="trainBytes"><option value="16" selected>16 bytes · 常见混合精度 AdamW 下限</option><option value="18">18 bytes · 更保守</option><option value="20">20 bytes · 含更多副本 / 缓冲</option></select></div>
-<div class="field"><label for="activationReserve">激活与运行预留</label><select id="activationReserve"><option value="0.20">额外 20% · 强检查点 / 小 batch</option><option value="0.40" selected>额外 40% · 粗略常规值</option><option value="0.80">额外 80% · 长序列 / 大 batch</option></select><p class="field-help">激活高度依赖 batch、序列长度和梯度检查点，这里只做数量级估算。</p></div>
+<div class="field"><label for="activationReserve">激活与临时空间（仅作粗估）</label><select id="activationReserve"><option value="0.20">额外 20% · 强检查点 / 小 batch</option><option value="0.40" selected>额外 40% · 中等预留</option><option value="0.80">额外 80% · 长序列 / 大 batch</option></select><p class="field-help">这不是固定比例。激活取决于 batch、序列长度、并行策略和梯度检查点。</p></div>
 </div>
-<div class="field"><label for="gpuSelect">用于卡数估算的 GPU</label><select id="gpuSelect"><option value="24">RTX 4090 · 24GB</option><option value="32">RTX 5090 · 32GB</option><option value="48">RTX 6000 Ada / L40S · 48GB</option><option value="80" selected>A100 / H100 · 80GB</option><option value="96">RTX PRO 6000 Blackwell · 96GB</option><option value="141">H200 · 141GB</option><option value="192">B200 · 192GB</option><option value="288">B300 · 288GB</option></select></div>
+<div class="field"><label for="gpuSelect">用于容量估算的 GPU</label><a class="inline-help-link" href="gpu.html">查看官方规格与购买/询价入口 ↗</a><select id="gpuSelect"><option value="24">RTX 4090 · 24GB</option><option value="32">RTX 5090 · 32GB</option><option value="48">RTX 6000 Ada / L40S · 48GB</option><option value="80" selected>A100 / H100 · 80GB</option><option value="96">RTX PRO 6000 Blackwell · 96GB</option><option value="141">H200 · 141GB</option><option value="192">B200 · 192GB</option><option value="288">B300 · 288GB</option></select></div>
+<div class="field" id="serverField" hidden><label for="gpusPerServer">每台服务器包含多少张 GPU</label><select id="gpusPerServer"><option value="8" selected>8 张 GPU · 常见 HGX 服务器</option><option value="4">4 张 GPU</option><option value="16">16 张 GPU</option><option value="72">72 张 GPU · NVL72 机架级系统</option></select><p class="field-help">这里只用于把“理论 GPU 张数”换算成服务器数量，不代表真实集群配置。</p></div>
 </article>
 <article class="card result-panel" aria-live="polite">
 <div class="result-label" id="resultLabel">建议准备的显存</div>
 <div class="result-big" id="totalResult">19.2 GB</div>
 <div class="result-sub" id="formulaText">8B × 2 bytes × 1.2</div>
 <div class="breakdown" id="breakdown"></div>
-<div class="gpu-answer"><span id="gpuCount">约需 1 张 80GB GPU</span><small id="gpuCaveat">这是容量判断，不包含并行效率和通信限制。</small></div>
+<div class="dual-result"><div class="metric-box"><small>理论 GPU 容量下限</small><b id="gpuCount">约 1 张 80GB GPU</b><p>只回答“显存装不装得下”</p></div><div class="metric-box" id="serverMetric" hidden><small>折算服务器容量下限</small><b id="serverCount">约 1 台服务器</b><p id="serverHint">按每台 8 张 GPU 计算</p></div></div><div class="result-warning"><strong id="warningTitle">容量下限 ≠ 工程建议</strong><p id="gpuCaveat">这是容量判断，不包含并行效率和通信限制。</p></div><div class="engineering-panel" id="engineeringPanel" hidden><h4>为什么真实训练集群可能大很多？</h4><p>显存只决定能不能装下；真实卡数还由训练时长目标和吞吐决定。</p><div class="reason-grid"><div class="reason-chip"><b>训练速度</b><span>更少 GPU 可能要训数月甚至更久</span></div><div class="reason-chip"><b>全局 Batch</b><span>需要足够并行度维持吞吐</span></div><div class="reason-chip"><b>通信效率</b><span>张量、流水线与数据并行会约束拓扑</span></div><div class="reason-chip"><b>容错与利用率</b><span>还要考虑故障、调度和有效利用率</span></div></div></div>
 <div class="result-actions"><button type="button" class="button primary" id="copyResult">复制结果</button><a class="button" href="gpu.html">查看 GPU 对照</a></div>
 </article>
 </div>
@@ -64,6 +66,13 @@
   const trainBytes = $('trainBytes');
   const activationReserve = $('activationReserve');
   const gpuSelect = $('gpuSelect');
+  const gpusPerServer = $('gpusPerServer');
+  const serverField = $('serverField');
+  const serverMetric = $('serverMetric');
+  const serverCount = $('serverCount');
+  const serverHint = $('serverHint');
+  const engineeringPanel = $('engineeringPanel');
+  const warningTitle = $('warningTitle');
   const inferenceFields = $('inferenceFields');
   const trainingFields = $('trainingFields');
   const totalResult = $('totalResult');
@@ -96,7 +105,8 @@
       resultLabel.textContent = '推理建议显存';
       formula = `${p}B × ${bytes} bytes × ${(1 + rv).toFixed(1)}`;
       lines = row('模型本身', base, '理论权重占用') + row('运行预留', extra, `${Math.round(rv*100)}% 粗略预留`);
-      gpuCaveat.textContent = '长上下文或高并发时，KV Cache 可能让实际需求继续增加。';
+      gpuCaveat.textContent = '长上下文、高并发和推理框架会让实际需求继续增加，多卡还需要合适的并行方案。';
+      warningTitle.textContent = '容量下限 ≠ 稳定运行配置';
       copyText = `模型：${p}B\n场景：推理\n精度：${precision.options[precision.selectedIndex].text}\n模型本身：${fmt(base)}\n建议显存：${fmt(total)}`;
     } else {
       const bytes = Number(trainBytes.value);
@@ -107,7 +117,8 @@
       resultLabel.textContent = '全量训练粗略显存';
       formula = `${p}B × ${bytes} bytes × ${(1 + rv).toFixed(1)}`;
       lines = row('参数相关状态', base, `${bytes} bytes / 参数`) + row('激活与运行预留', activation, `额外 ${Math.round(rv*100)}%`);
-      gpuCaveat.textContent = '训练卡数通常还受并行策略、通信、batch 和序列长度限制。';
+      gpuCaveat.textContent = '这个数字只表示显存总容量够不够。真实训练规模还取决于目标训练时长、Token 数、吞吐、并行拓扑和集群利用率。';
+      warningTitle.textContent = '容量下限 ≠ 真实训练集群规模';
       copyText = `模型：${p}B\n场景：全量训练\n参数相关状态：${fmt(base)}\n含激活粗估：${fmt(total)}`;
     }
 
@@ -115,7 +126,21 @@
     totalResult.textContent = fmt(total);
     formulaText.textContent = formula;
     breakdown.innerHTML = lines;
-    gpuCount.textContent = count === 1 ? `容量上约需 1 张 ${gpu}GB GPU` : `容量下限约 ${count} 张 ${gpu}GB GPU`;
+    gpuCount.textContent = count === 1 ? `约 1 张 ${gpu}GB GPU` : `约 ${count} 张 ${gpu}GB GPU`;
+    if (mode === 'training') {
+      const perServer = Number(gpusPerServer.value);
+      const servers = Math.ceil(count / perServer);
+      serverCount.textContent = `约 ${servers} 台服务器`;
+      serverHint.textContent = `按每台 ${perServer} 张 GPU 折算`;
+      serverMetric.hidden = false;
+      serverField.hidden = false;
+      engineeringPanel.hidden = false;
+      copyText += `\n理论 GPU 容量下限：${count} 张 ${gpu}GB GPU\n折算服务器容量下限：${servers} 台（每台 ${perServer} 张）\n注意：这不是实际训练集群建议。`;
+    } else {
+      serverMetric.hidden = true;
+      serverField.hidden = true;
+      engineeringPanel.hidden = true;
+    }
   }
 
   document.querySelectorAll('.segment').forEach(button => button.addEventListener('click', () => {
@@ -123,6 +148,7 @@
     document.querySelectorAll('.segment').forEach(x => x.classList.toggle('active', x === button));
     inferenceFields.hidden = mode !== 'inference';
     trainingFields.hidden = mode !== 'training';
+    serverField.hidden = mode !== 'training';
     precision.closest('.field').hidden = mode !== 'inference';
     calculate();
   }));
@@ -133,7 +159,7 @@
     calculate();
   }));
 
-  [params, precision, reserve, trainBytes, activationReserve, gpuSelect].forEach(el => el.addEventListener('input', calculate));
+  [params, precision, reserve, trainBytes, activationReserve, gpuSelect, gpusPerServer].forEach(el => el.addEventListener('input', calculate));
   copyResult.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(copyText);
