@@ -1,0 +1,11 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>显存速算小站</title><meta name="description" content="用最简单的方法理解模型参数、推理显存、训练显存和常见 GPU。"><link rel="stylesheet" href="style.css"></head><body>
+<nav class="nav"><div class="nav-inner"><a class="brand" href="index.html"><span class="brand-dot"></span><span>显存速算小站</span></a><div class="nav-links"><a class="active" href="index.html">首页</a><a href="vram.html">显存速算</a><a href="training.html">训练显存</a><a href="gpu.html">GPU 对照</a><a href="glossary.html">术语表</a></div></div></nav>
+<main><section class="hero"><div class="hero-grid"><div><span class="kicker">AI Infra 入门</span><h1>小白怎么速算<br>模型显存</h1><p class="lead">先算模型本身，再加推理缓存或训练过程。几分钟建立一套能长期复用的显存判断方法。</p><div class="button-row"><a class="button primary" href="vram.html">开始学习</a><a class="button" href="gpu.html">查 GPU 对照</a></div></div><aside class="hero-card"><div class="formula"><small>FP16 / BF16 模型</small><code>参数量（B）× 2 ≈ GB</code></div><div class="formula"><small>推理</small><code>模型 + KV Cache + 临时空间</code></div><div class="formula"><small>全量训练</small><code>约 16 bytes / 参数 + 激活</code></div></aside></div></section>
+<section class="section"><div class="section-head"><h2>从这里开始</h2><p class="lead">每一页只解决一个问题，适合第一次接触 AI Infra 的读者。</p></div><div class="grid four">
+<article class="card lesson-card"><div class="icon">🧮</div><h3>显存速算</h3><p>学会参数量、精度和推理显存的核心公式，并使用在线计算器。</p><a class="button" href="vram.html">打开教程</a></article>
+<article class="card lesson-card"><div class="icon">🧠</div><h3>训练显存</h3><p>理解为什么训练比推理贵，以及“16 bytes / 参数”到底从哪里来。</p><a class="button" href="training.html">查看解释</a></article>
+<article class="card lesson-card"><div class="icon">⚡</div><h3>GPU 对照</h3><p>快速判断 4090、H100、H200、B200、B300 大概能放下多大的模型。</p><a class="button" href="gpu.html">查看表格</a></article>
+<article class="card lesson-card"><div class="icon">📖</div><h3>术语表</h3><p>用简单语言理解参数、精度、KV Cache、梯度、激活和优化器状态。</p><a class="button" href="glossary.html">查术语</a></article>
+</div></section>
+<section class="section"><div class="card callout">三句话先记住：参数量 × 每参数字节数 = 模型最低显存；推理还要加聊天缓存；训练还要保存梯度、学习记录和解题草稿。</div></section></main>
+<footer class="footer"><span>显存速算小站 · VRAM Math</span><span>适合 AI / LLM 新人快速入门</span></footer></body></html>
